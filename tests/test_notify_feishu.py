@@ -35,15 +35,27 @@ class NotifyTests(unittest.TestCase):
             n.build_message(self.release, 'release')
 
     def test_no_mentions_and_test_label(self):
-        post = n.build_message(self.release, 'test')['content']['post']['zh_cn']
-        self.assertTrue(post['title'].startswith('【测试消息】'))
-        self.assertEqual(post['content'][2][0]['text'], self.release['body'])
-        self.assertTrue(all(node['tag'] in ('text', 'a') for row in post['content'] for node in row))
+        message = n.build_message(self.release, 'test')
+        self.assertEqual(message['msg_type'], 'interactive')
+        card = message['card']
+        self.assertTrue(card['header']['title']['content'].startswith('【测试消息】'))
+        texts = [e['text'] for e in card['elements'] if e['tag'] == 'div' and 'text' in e]
+        self.assertTrue(any(self.release['body'] in t['content'] for t in texts if t['tag'] == 'plain_text'))
+        self.assertFalse(any('<at' in t['content'] for t in texts if t['tag'] == 'lark_md'))
 
     def test_body_is_bounded(self):
-        self.release['body'] = 'a' * 10000
-        post = n.build_message(self.release, 'backfill')['content']['post']['zh_cn']
-        self.assertLess(len(post['content'][1][0]['text']), 3600)
+        self.release['body'] = '# Title\n' + '\n'.join('- ' + 'a' * 1000 for _ in range(20))
+        card = n.build_message(self.release, 'backfill')['card']
+        text = next(e['text']['content'] for e in card['elements'] if e.get('text', {}).get('content', '').startswith('• '))
+        self.assertEqual(text.count('• '), 5)
+        self.assertLess(len(text), 650)
+
+    def test_download_buttons_and_stable_color(self):
+        card = n.build_message(self.release, 'release')['card']
+        self.assertEqual(card['header']['template'], 'blue')
+        buttons = [b for e in card['elements'] if e['tag'] == 'action' for b in e['actions']]
+        self.assertEqual(buttons[0]['url'], self.release['assets'][0]['browser_download_url'])
+        self.assertEqual(buttons[-1]['url'], self.release['html_url'])
 
     @patch.object(n, 'request_json')
     def test_acknowledgment(self, request):

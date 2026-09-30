@@ -20,7 +20,7 @@ Installers are in GitHub Releases. Source development is maintained separately i
 - `FEISHU_WEBHOOK_URL`：群自定义机器人的 Webhook。
 - `FEISHU_SIGN_SECRET`：该机器人启用「签名校验」后生成的密钥。
 
-正式 Release 发布 (`release.published`) 后自动发送；草稿、预发布不发送。请先上传所有附件，再发布草稿。消息包含版本、Release 说明（过长截断）、deb 下载链接及大小、完整 Release 链接和升级注意事项。仅依赖 Python 标准库，不安装第三方包。
+正式 Release 发布 (`release.published`) 后自动发送；草稿、预发布不发送。请先上传所有附件，再发布草稿。消息使用彩色标题卡片，包含版本、前 5 条更新摘要（每条最多 120 字）、deb 下载按钮及大小、完整 Release 按钮和升级注意事项。正式通知为蓝色，测试为橙色；外部文本使用 plain_text，不解析 @人语法。仅依赖 Python 标准库，不安装第三方包。
 
 手动测试或补发：Actions → **Release to Feishu** → **Run workflow**，选择 `main`，填写已发布正式版 tag（例如 `v2.3.0`）；`mode=test` 发送带「测试消息」前缀的真实版本信息，`mode=backfill` 发送带「补发」前缀的信息。
 

@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import time
@@ -50,22 +51,58 @@ def build_message(release, mode):
         raise NotificationError('No completed .deb asset; upload assets before publishing')
     prefix = {'test': '【测试消息】', 'backfill': '【补发】', 'release': ''}[mode]
     title = f"{prefix}Pandora 发版通知 · {release['tag_name']}"
-    # Rich-text text nodes deliberately do not interpret Markdown/HTML or @mentions.
-    rows = [[{'tag': 'text', 'text': release.get('name') or release['tag_name']}]]
+    # Release content stays in plain_text nodes so HTML/@mention syntax is inert.
+    def plain(text):
+        return {'tag': 'plain_text', 'content': text}
+
+    def paragraph(text):
+        return {'tag': 'div', 'text': plain(text)}
+
+    body = (release.get('body') or '').strip()
+    highlights = []
+    for line in body.splitlines():
+        if re.match(r'^#{1,6}\s+', line) and highlights:
+            break
+        match = re.match(r'^\s*[-*+]\s+(.+)', line)
+        if match:
+            text = re.sub(r'\[([^]]+)\]\([^)]+\)', r'\1', match.group(1))
+            text = text.replace('`', '').replace('**', '').strip()
+            highlights.append(text[:117] + '…' if len(text) > 120 else text)
+        if len(highlights) == 5:
+            break
+    if not highlights:
+        lines = [line.strip() for line in body.splitlines() if line.strip() and not line.startswith('#')]
+        highlights = [(' '.join(lines)[:240] or '本次更新详情请查看完整发布说明。')]
+    elements = []
     if mode == 'test':
-        rows.append([{'tag': 'text', 'text': '机器人连接测试；下方使用真实版本信息，不代表新版本发布。'}])
-    body = (release.get('body') or '更新详情请查看 Release 页面。').strip()
-    if len(body) > 3500:
-        body = body[:3500] + '\n……完整说明请查看 Release。'
-    rows.append([{'tag': 'text', 'text': body}])
-    for asset in assets:
-        rows.append([{'tag': 'a', 'text': f"下载 {asset['name']}（{asset['size'] / 1024**2:.1f} MiB）",
-                      'href': asset['browser_download_url']}])
-    rows.append([{'tag': 'a', 'text': '查看 Release 与校验文件', 'href': release['html_url']}])
-    rows.append([{'tag': 'text', 'text': '升级前请停止录制、遥操作和拖拽，安全支撑机械臂并关闭客户端。'}])
+        elements.append({'tag': 'note', 'elements': [plain('卡片样式测试 · 使用已有版本信息，并非新版本发布')]})
+    elements.append({'tag': 'div', 'fields': [
+        {'is_short': True, 'text': plain('发布类型\n正式版' + (' · 补发' if mode == 'backfill' else ''))},
+        {'is_short': True, 'text': plain('安装包\n' + ' / '.join(f"{a['size'] / 1024**2:.1f} MiB" for a in assets))},
+    ]})
+    elements.extend([{'tag': 'hr'},
+                     {'tag': 'div', 'text': {'tag': 'lark_md', 'content': '**本次更新**'}},
+                     paragraph('\n\n'.join('• ' + item for item in highlights)),
+                     {'tag': 'hr'},
+                     {'tag': 'div', 'text': {'tag': 'lark_md', 'content': '**安装与升级**'}},
+                     paragraph('升级前停止录制、遥操作和拖拽，安全支撑机械臂并关闭客户端。')])
     if release['tag_name'] == 'v2.3.0':
-        rows.append([{'tag': 'text', 'text': '2.3.0 已知安装问题：若提示内置配置无读取权限，执行 sudo chmod 644 /opt/jiwu-abc/site/configs/*.json 后重新启动。'}])
-    return {'msg_type': 'post', 'content': {'post': {'zh_cn': {'title': title, 'content': rows}}}}
+        elements.append(paragraph('适用系统：Ubuntu 22.04 · amd64\n兼容提醒：新 schema 使用新 task name；UMI IMU 按 30 Hz 归档。'))
+        elements.append({'tag': 'note', 'elements': [plain('2.3.0 若提示配置无读取权限，执行：sudo chmod 644 /opt/jiwu-abc/site/configs/*.json')]})
+    for asset in assets:
+        elements.append({'tag': 'action', 'actions': [
+            {'tag': 'button', 'text': plain('下载 ' + asset['name']),
+             'type': 'primary', 'url': asset['browser_download_url']},
+        ]})
+    elements.append({'tag': 'action', 'actions': [
+        {'tag': 'button', 'text': plain('完整发布说明与校验文件'), 'type': 'default', 'url': release['html_url']},
+    ]})
+    elements.append({'tag': 'note', 'elements': [plain('Pandora发版小助手 · 摘要仅展示前 5 项，完整变更及验证结果见发布说明')]})
+    return {'msg_type': 'interactive', 'card': {
+        'config': {'wide_screen_mode': True},
+        'header': {'template': 'orange' if mode == 'test' else 'blue', 'title': plain(title)},
+        'elements': elements,
+    }}
 
 
 def send_message(payload, webhook, secret):
