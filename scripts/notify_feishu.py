@@ -93,7 +93,7 @@ def build_message(release, mode):
         elements.append({'tag': 'action', 'actions': [
             {'tag': 'button', 'text': plain('下载 ' + asset['name']),
              'type': 'primary', 'url': asset['browser_download_url']},
-            {'tag': 'button', 'text': plain('实验室数据采集指南'), 'type': 'default',
+            {'tag': 'button', 'text': plain('实验室数据采集指南'), 'type': 'primary',
              'url': 'https://fcntegf4lssh.feishu.cn/wiki/QANEw2ApKijWQHkKghycbdoRndb'},
         ]})
     elements.append({'tag': 'action', 'actions': [
