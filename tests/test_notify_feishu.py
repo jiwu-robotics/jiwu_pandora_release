@@ -74,3 +74,24 @@ class NotifyTests(unittest.TestCase):
             with self.assertRaises(n.NotificationError):
                 n.send_message({}, url, secret)
         request.assert_not_called()
+
+
+    def test_source_pr_buttons_preserve_titles_as_plain_text(self):
+        self.release['tag_name'] = 'v2.9.5'
+        urls = ['https://github.com/jiwu-robotics/jiwu_pandora/pull/12',
+                'https://github.com/jiwu-robotics/jiwu_pandora/pull/13']
+        self.release['body'] = '- Feature\n\n## 源码 PR\n' + '\n'.join(
+            '- [#' + str(i+12) + ' <at>title</at>](' + url + ')' for i, url in enumerate(urls))
+        message = n.build_message(self.release, 'release')
+        buttons = [b for e in message['card']['elements'] if e['tag'] == 'action' for b in e['actions']]
+        prs = [b for b in buttons if b['url'] in urls]
+        self.assertEqual([b['url'] for b in prs], urls)
+        self.assertTrue(all(b['text']['tag'] == 'plain_text' for b in prs))
+
+    def test_missing_and_wrong_pr_rejected(self):
+        self.release['tag_name'] = 'v2.9.5'
+        for body in ('- Feature', '## 源码 PR\n- [wrong](https://example.com/pull/1)',
+                     '## 源码 PR\n- [wrong](https://github.com/jiwu-robotics/jiwu_pandora/pull/1?evil=1)'):
+            self.release['body'] = body
+            with self.assertRaises(n.NotificationError):
+                n.build_message(self.release, 'release')

@@ -40,6 +40,26 @@ def signature(timestamp, secret):
     return base64.b64encode(hmac.new(key, b'', hashlib.sha256).digest()).decode()
 
 
+def source_prs(release):
+    body = release.get('body') or ''
+    section = re.search(r'^## 源码 PR\s*\n(.*?)(?=^## |\Z)', body, re.M | re.S)
+    prs = []
+    if section:
+        for line in section.group(1).splitlines():
+            if not line.strip():
+                continue
+            match = re.fullmatch(r'\s*- \[([^]\n]+)\]\((https://github\.com/jiwu-robotics/jiwu_pandora/pull/[1-9][0-9]*)\)\s*', line)
+            if not match:
+                raise NotificationError('Invalid source PR entry in release notes')
+            title, url = match.groups()
+            if url not in {p[1] for p in prs}:
+                prs.append((title, url))
+    version = re.fullmatch(r'v?(\d+)\.(\d+)\.(\d+)', release['tag_name'])
+    if version and tuple(map(int, version.groups())) >= (2, 9, 5) and not prs:
+        raise NotificationError('Source PR links are required for releases from 2.9.5')
+    return prs
+
+
 def build_message(release, mode):
     if mode not in ('release', 'test', 'backfill'):
         raise NotificationError('Unsupported notification mode')
@@ -89,6 +109,12 @@ def build_message(release, mode):
     if release['tag_name'] == 'v2.3.0':
         elements.append(paragraph('适用系统：Ubuntu 22.04 · amd64\n兼容提醒：新 schema 使用新 task name；UMI IMU 按 30 Hz 归档。'))
         elements.append({'tag': 'note', 'elements': [plain('2.3.0 若提示配置无读取权限，执行：sudo chmod 644 /opt/jiwu-abc/site/configs/*.json')]})
+    prs = source_prs(release)
+    if prs:
+        elements.extend([{'tag': 'hr'}, paragraph('源码 PR')])
+        for title, url in prs:
+            elements.append({'tag': 'action', 'actions': [
+                {'tag': 'button', 'text': plain(title), 'type': 'default', 'url': url}]})
     for asset in assets:
         elements.append({'tag': 'action', 'actions': [
             {'tag': 'button', 'text': plain('下载 ' + asset['name']),
@@ -144,6 +170,7 @@ def main():
                            headers={'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
                                     'Accept': 'application/vnd.github+json', 'User-Agent': 'Pandora-release-notifier'})
     payload = build_message(release, mode)
+    print('Source PR links: ' + ', '.join(url for _, url in source_prs(release)))
     send_message(payload, os.environ.get('FEISHU_WEBHOOK_URL', ''), os.environ.get('FEISHU_SIGN_SECRET', ''))
 
 
