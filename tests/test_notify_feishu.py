@@ -84,6 +84,7 @@ class NotifyTests(unittest.TestCase):
             '- [#' + str(i+12) + ' <at>title</at>](' + url + ')' for i, url in enumerate(urls))
         message = n.build_message(self.release, 'release')
         buttons = [b for e in message['card']['elements'] if e['tag'] == 'action' for b in e['actions']]
+        self.assertEqual(message['card']['header']['title']['content'], 'Pandora 发版通知 · v2.9.5')
         prs = [b for b in buttons if b['url'] in urls]
         self.assertEqual([b['url'] for b in prs], urls)
         self.assertTrue(all(b['text']['tag'] == 'plain_text' for b in prs))
