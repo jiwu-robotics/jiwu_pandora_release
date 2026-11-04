@@ -112,9 +112,9 @@ def build_message(release, mode):
     prs = source_prs(release)
     if prs:
         elements.extend([{'tag': 'hr'}, paragraph('源码 PR')])
-        for title, url in prs:
+        for pr_title, url in prs:
             elements.append({'tag': 'action', 'actions': [
-                {'tag': 'button', 'text': plain(title), 'type': 'default', 'url': url}]})
+                {'tag': 'button', 'text': plain(pr_title), 'type': 'default', 'url': url}]})
     for asset in assets:
         elements.append({'tag': 'action', 'actions': [
             {'tag': 'button', 'text': plain('下载 ' + asset['name']),
