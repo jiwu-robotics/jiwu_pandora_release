@@ -88,6 +88,13 @@ class NotifyTests(unittest.TestCase):
         prs = [b for b in buttons if b['url'] in urls]
         self.assertEqual([b['url'] for b in prs], urls)
         self.assertTrue(all(b['text']['tag'] == 'plain_text' for b in prs))
+        self.assertTrue(all(b['type'] == 'primary' for b in prs))
+        elements = message['card']['elements']
+        pr_heading = next(i for i, e in enumerate(elements) if e.get('text', {}).get('content') == '**源码 PR**')
+        install_heading = next(i for i, e in enumerate(elements) if e.get('text', {}).get('content') == '**安装与升级**')
+        self.assertEqual(elements[pr_heading]['text']['tag'], 'lark_md')
+        self.assertLess(pr_heading, install_heading)
+        self.assertTrue(all(e['tag'] == 'action' for e in elements[pr_heading + 1:install_heading - 1]))
 
     def test_missing_and_wrong_pr_rejected(self):
         self.release['tag_name'] = 'v2.9.5'
