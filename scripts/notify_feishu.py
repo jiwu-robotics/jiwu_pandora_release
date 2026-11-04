@@ -102,19 +102,19 @@ def build_message(release, mode):
     ]})
     elements.extend([{'tag': 'hr'},
                      {'tag': 'div', 'text': {'tag': 'lark_md', 'content': '**本次更新**'}},
-                     paragraph('\n\n'.join('• ' + item for item in highlights)),
-                     {'tag': 'hr'},
+                     paragraph('\n\n'.join('• ' + item for item in highlights))])
+    prs = source_prs(release)
+    if prs:
+        elements.extend([{'tag': 'hr'}, {'tag': 'div', 'text': {'tag': 'lark_md', 'content': '**源码 PR**'}}])
+        for pr_title, url in prs:
+            elements.append({'tag': 'action', 'actions': [
+                {'tag': 'button', 'text': plain(pr_title), 'type': 'primary', 'url': url}]})
+    elements.extend([{'tag': 'hr'},
                      {'tag': 'div', 'text': {'tag': 'lark_md', 'content': '**安装与升级**'}},
                      paragraph('升级前停止录制、遥操作和拖拽，安全支撑机械臂并关闭客户端。')])
     if release['tag_name'] == 'v2.3.0':
         elements.append(paragraph('适用系统：Ubuntu 22.04 · amd64\n兼容提醒：新 schema 使用新 task name；UMI IMU 按 30 Hz 归档。'))
         elements.append({'tag': 'note', 'elements': [plain('2.3.0 若提示配置无读取权限，执行：sudo chmod 644 /opt/jiwu-abc/site/configs/*.json')]})
-    prs = source_prs(release)
-    if prs:
-        elements.extend([{'tag': 'hr'}, paragraph('源码 PR')])
-        for pr_title, url in prs:
-            elements.append({'tag': 'action', 'actions': [
-                {'tag': 'button', 'text': plain(pr_title), 'type': 'default', 'url': url}]})
     for asset in assets:
         elements.append({'tag': 'action', 'actions': [
             {'tag': 'button', 'text': plain('下载 ' + asset['name']),
