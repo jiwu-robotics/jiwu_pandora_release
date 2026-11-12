@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+
+# LAN installers stay on nuc25 only
+public/
+*.deb
+*.whl
+*.tar.gz
