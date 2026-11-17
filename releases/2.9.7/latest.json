@@ -1,0 +1,12 @@
+{
+  "version": "2.9.7",
+  "platform": "ubuntu22.04-amd64",
+  "python": "3.12",
+  "artifacts": {
+    "deb": {
+      "name": "jiwu-pandora_2.9.7_amd64.deb",
+      "size": 467526686,
+      "sha256": "c36c8a27cf47fe3879577d1c9688a1ebc11d184a84e20a068420ef86f33ed23c"
+    }
+  }
+}
