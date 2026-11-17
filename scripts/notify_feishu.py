@@ -60,15 +60,42 @@ def source_prs(release):
     return prs
 
 
+RELEASES_DIRECTORY = Path(__file__).resolve().parents[1] / 'releases'
+LAN_BASE = 'http://192.168.110.25:8765'
+
+
+def download_assets(release):
+    version = release['tag_name'].removeprefix('v')
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version):
+        raise NotificationError('Invalid release version')
+    if tuple(map(int, version.split('.'))) < (2, 9, 7):
+        assets = [a for a in release.get('assets', [])
+                  if a['name'].endswith('.deb') and a.get('state') == 'uploaded' and a.get('size', 0) > 0]
+        if not assets:
+            raise NotificationError('No completed .deb asset; upload assets before publishing')
+        return assets
+    try:
+        manifest = json.loads((RELEASES_DIRECTORY / version / 'latest.json').read_text())
+        item = manifest['artifacts']['deb']
+        if (manifest['version'] != version or
+                item['name'] != f'jiwu-pandora_{version}_amd64.deb' or
+                type(item['size']) is not int or not 0 < item['size'] < 8 * 1024**3 or
+                not re.fullmatch(r'[0-9a-f]{64}', item['sha256'])):
+            raise ValueError('Invalid LAN metadata')
+    except (OSError, KeyError, TypeError, ValueError):
+        raise NotificationError('Missing or invalid committed LAN release metadata') from None
+    url = LAN_BASE + '/releases/assets/' + version + '/' + item['name']
+    if '(' + url + ')' not in (release.get('body') or ''):
+        raise NotificationError('Release notes must contain the matching LAN download link')
+    return [dict(item, browser_download_url=url)]
+
+
 def build_message(release, mode):
     if mode not in ('release', 'test', 'backfill'):
         raise NotificationError('Unsupported notification mode')
     if release.get('draft') is not False or release.get('prerelease') is not False:
         raise NotificationError('Only published stable releases can be sent')
-    assets = [a for a in release.get('assets', [])
-              if a['name'].endswith('.deb') and a.get('state') == 'uploaded' and a.get('size', 0) > 0]
-    if not assets:
-        raise NotificationError('No completed .deb asset; upload assets before publishing')
+    assets = download_assets(release)
     prefix = {'test': '【测试消息】', 'backfill': '【补发】', 'release': ''}[mode]
     title = f"{prefix}Pandora 发版通知 · {release['tag_name']}"
     # Release content stays in plain_text nodes so HTML/@mention syntax is inert.
@@ -115,6 +142,8 @@ def build_message(release, mode):
     if release['tag_name'] == 'v2.3.0':
         elements.append(paragraph('适用系统：Ubuntu 22.04 · amd64\n兼容提醒：新 schema 使用新 task name；UMI IMU 按 30 Hz 归档。'))
         elements.append({'tag': 'note', 'elements': [plain('2.3.0 若提示配置无读取权限，执行：sudo chmod 644 /opt/jiwu-abc/site/configs/*.json')]})
+    if tuple(map(int, release['tag_name'].removeprefix('v').split('.'))) >= (2, 9, 7):
+        elements.append(paragraph('安装包仅在实验室局域网提供，请连接局域网后下载。'))
     for asset in assets:
         elements.append({'tag': 'action', 'actions': [
             {'tag': 'button', 'text': plain('下载 ' + asset['name']),
