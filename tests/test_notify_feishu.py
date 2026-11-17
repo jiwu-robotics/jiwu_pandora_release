@@ -103,3 +103,36 @@ class NotifyTests(unittest.TestCase):
             self.release['body'] = body
             with self.assertRaises(n.NotificationError):
                 n.build_message(self.release, 'release')
+
+
+class LanNotifyTests(unittest.TestCase):
+    def test_lan_metadata_and_link_required(self):
+        import tempfile
+        import json
+        with tempfile.TemporaryDirectory() as directory, patch.object(n, 'RELEASES_DIRECTORY', Path(directory)):
+            version = '2.9.7'
+            url = n.LAN_BASE + '/releases/assets/2.9.7/jiwu-pandora_2.9.7_amd64.deb'
+            release = dict(tag_name='v2.9.7', draft=False, prerelease=False, assets=[],
+                           html_url='https://github.com/jiwu-robotics/jiwu_pandora_release/releases/tag/v2.9.7',
+                           body='- UMI guidance\n\n## 源码 PR\n- [#22 Release](https://github.com/jiwu-robotics/jiwu_pandora/pull/22)\n\n## 下载\n- [deb](' + url + ')')
+            with self.assertRaises(n.NotificationError):
+                n.build_message(release, 'release')
+            folder = Path(directory) / version
+            folder.mkdir()
+            manifest = dict(version=version, artifacts=dict(deb=dict(name='jiwu-pandora_2.9.7_amd64.deb', size=123456, sha256='a'*64)))
+            path = folder / 'latest.json'
+            path.write_text(json.dumps(manifest))
+            message = n.build_message(release, 'release')
+            buttons = [b for e in message['card']['elements'] if e['tag'] == 'action' for b in e['actions']]
+            self.assertTrue(any(b['url'] == url for b in buttons))
+            self.assertEqual(message['card']['header']['template'], 'blue')
+            for value in ('2.9.8', None):
+                manifest['version'] = value
+                path.write_text(json.dumps(manifest))
+                with self.assertRaises(n.NotificationError):
+                    n.build_message(release, 'release')
+            manifest['version'] = version
+            path.write_text(json.dumps(manifest))
+            release['body'] = release['body'].replace(url, 'https://example.com/installer.deb')
+            with self.assertRaises(n.NotificationError):
+                n.build_message(release, 'release')
