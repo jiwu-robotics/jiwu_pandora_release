@@ -1,0 +1,24 @@
+{
+  "commit": "332d2e26eb97c5a5c747d81f8f457e822c117ba1",
+  "dirty": false,
+  "python": "3.12.14 (main, Sep  1 2026, 14:16:52) [Clang 22.1.3 ]",
+  "ego_sdk": {
+    "source": "EGOViewer_v2.0.11_202609101429_a152eb1_linux_x86_64",
+    "platform": "linux-x86_64",
+    "files": {
+      "libOrbbecSDK.so.2": "4bed068b420f5eae4767397374d31fba7e3c23672d062149b869f8a823582fcc",
+      "OrbbecSDKConfig.xml": "4ed0863a42b954438b872689249bee66269ebe38edb2f78ca31afa7ea6b87c76",
+      "LICENSE": "2004ee3ef8282a85f7dbd035dfacf63cf03d569537bc08655ffeb140ea3671c5",
+      "extensions/depthengine/libdepthengine.so": "b4b3e2ce4041e389d6dec51d071e7d89d33f5452068c804dc4bc2706d065b8bd",
+      "extensions/depthengine/libdepthengine.so.2.0": "b4b3e2ce4041e389d6dec51d071e7d89d33f5452068c804dc4bc2706d065b8bd",
+      "extensions/filters/libFilterProcessor.so": "ff9a122f4f764174c7c0a4a8e3503ccca7dc9aac5332c00fce79c71b79b7153e",
+      "extensions/filters/libob_priv_filter.so": "46427ed80fc02e34651bd33d600711387be429b8121cc81c82f489d435f41163",
+      "extensions/firmwareupdater/libfirmwareupdater.so": "aa89e12b4313831d020430154f1b80f7772c9edf156ea22c5749d9b5e4c3d9cb",
+      "extensions/frameprocessor/libob_frame_processor.so": "02a377cfe4ef98a069a06e17b64ea024f625246f48489e155962b900b605fb3d"
+    }
+  },
+  "sdk_metadata_adjustments": [
+    "opencv-python -> opencv-python-headless",
+    "av==12.3.0 -> av==15.1.0"
+  ]
+}
